@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<title>Planning IRC</title>
+<meta name="theme-color" content="#1f3a5f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Planning IRC">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#1c2430;--muted:#6b7686;--line:#e2e6ed;--accent:#1f3a5f;--ok:#2e7d4f;--warn:#b7791f;--danger:#c0392b}
+@media (prefers-color-scheme:dark){:root{--bg:#11151b;--card:#1a2028;--ink:#e7ebf1;--muted:#98a3b3;--line:#2a323d;--accent:#8fb4e6;--ok:#5cc58a;--warn:#e0a84a;--danger:#e06c5c}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1300px;margin:0 auto;padding:14px 14px 70px}
+.hidden{display:none!important}
+.center{min-height:90vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;width:100%;max-width:380px}
+.box h1{margin:0 0 4px;font-size:22px}.box p{margin:0 0 16px;color:var(--muted);font-size:14px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+textarea{min-height:70px;resize:vertical}
+.btn{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:8px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.6;cursor:default}
+.box .btn.primary{width:100%;margin-top:16px;padding:11px}
+.err{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.brand{font-weight:700;font-size:19px}.brand small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.me{position:relative}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:14px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c);display:inline-block;flex:none}
+.menu{position:absolute;right:0;top:110%;background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:5;overflow:hidden}
+.menu button{display:block;width:100%;text-align:left;border:none;background:none;padding:10px 14px;cursor:pointer}
+.menu button:hover{background:var(--bg)}
+.weeknav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.weeknav .lbl{font-weight:600;padding:0 6px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:var(--card);padding:7px 14px;border-radius:20px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:14px}
+@media(max-width:600px){.cards{grid-template-columns:1fr 1fr;gap:8px}.scard{padding:8px 10px}.scard b{font-size:13px}.pill{float:none;display:inline-block;margin-bottom:3px}}
+.scard{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:10px;padding:10px 12px;cursor:default}
+.scard.click{cursor:pointer}.scard.sel{outline:2px solid var(--c)}
+.scard b{font-size:14px}.scard .meta{font-size:12px;color:var(--muted);margin:2px 0 6px}
+.pill{float:right;font-size:11px;padding:1px 8px;border-radius:10px;background:var(--line)}
+.pill.ok{background:var(--ok);color:#fff}
+.bar{height:7px;border-radius:6px;background:var(--line);overflow:hidden}.bar>i{display:block;height:100%;background:var(--c,var(--ok))}
+.days{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:760px){.days{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1150px){.days{grid-template-columns:repeat(3,1fr)}}
+.day{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.day.today{border:2px solid var(--accent)}
+.day h2{font-size:16px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:11px;font-weight:600;background:var(--accent);color:var(--bg);padding:2px 8px;border-radius:10px}
+.slot{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 4px}
+.slot button{border:none;background:none;color:var(--accent);cursor:pointer;font-size:13px;text-transform:none;letter-spacing:0;padding:2px 4px}
+.task{display:flex;gap:10px;align-items:flex-start;padding:8px 8px 8px 10px;border-left:4px solid var(--c);background:var(--bg);border-radius:8px;margin-bottom:6px}
+.task input[type=checkbox]{width:22px;height:22px;margin:1px 0 0;accent-color:var(--ok);flex:none;cursor:pointer;padding:0}
+.task .body{flex:1;min-width:0;cursor:pointer}
+.task .tag{font-size:11px;font-weight:600;color:var(--c)}
+.task .t{font-weight:600}.task .d{font-size:13px;color:var(--muted)}
+.task .n{font-size:12px;margin-top:3px;padding:3px 7px;border:1px dashed var(--line);border-radius:6px;white-space:pre-wrap}
+.task.done .t{text-decoration:line-through;color:var(--muted)}
+.owner{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);margin-right:6px}
+.st{display:inline-block;font-size:11px;padding:0 7px;border-radius:9px;background:var(--warn);color:#fff;margin-left:4px;vertical-align:1px}
+.empty{font-size:13px;color:var(--muted);font-style:italic}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td .btn{margin:2px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:30px 14px;z-index:10;overflow:auto}
+.modal .box{max-width:460px}
+.modal .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal .acts{display:flex;gap:8px;justify-content:space-between;margin-top:16px;flex-wrap:wrap}
+.modal .acts .right{display:flex;gap:8px;margin-left:auto}
+.ro{font-size:14px;padding:4px 0}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:90vw;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+.loading{position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:30;animation:ld 1s infinite linear;transform-origin:left}
+@keyframes ld{0%{transform:scaleX(0)}50%{transform:scaleX(.7)}100%{transform:scaleX(1);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast"></div>
+<div id="loading" class="loading hidden"></div>
+
+<script>
+(function(){
+'use strict';
+var JOURS=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+var MOIS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+var STATUTS=['À faire','En cours','Fait'];
+var CRENEAUX=['Matin','Après-midi'];
+var S={token:null,me:null,users:[],dossiers:[],tasks:[],monday:null,tab:'mine',team:'all',menu:false,busy:0};
+
+/* ---------- utilitaires ---------- */
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pad(n){return(n<10?'0':'')+n}
+function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parseIso(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function mondayOf(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x}
+function fmtDay(d){return JOURS[(d.getDay()+6)%7]+' '+d.getDate()+' '+MOIS[d.getMonth()]}
+function fmtShort(s){if(!s)return'';var d=parseIso(s);return d.getDate()+' '+MOIS[d.getMonth()]}
+function $(id){return document.getElementById(id)}
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show')},3200)}
+function busy(n){S.busy+=n;$('loading').classList.toggle('hidden',S.busy<=0)}
+function user(id){for(var i=0;i<S.users.length;i++)if(S.users[i].id===id)return S.users[i];return{nom:'?',couleur:'#888'}}
+function dossier(id){for(var i=0;i<S.dossiers.length;i++)if(S.dossiers[i].id===id)return S.dossiers[i];return{nom:'Sans dossier',couleur:'#8a94a3'}}
+function isAdmin(){return S.me&&S.me.role==='admin'}
+function canEdit(t){return isAdmin()||(t.userId===S.me.id)}
+function pct(l){if(!l.length)return 0;return Math.round(100*l.filter(function(t){return t.statut==='Fait'}).length/l.length)}
+
+var API_URL='https://script.google.com/macros/s/AKfycbzSC-qGOl2oZqzCjXSLK3EMren6YHXCCUmbIFwyiIijcL3cVKG1MeZc85iiXiJ_JBp0eQ/exec';
+function api(name){
+  var args=[].slice.call(arguments,1);
+  busy(1);
+  return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:name,args:args})})
+    .then(function(r){return r.json()})
+    .then(function(r){
+      busy(-1);
+      if(r&&r.ok)return r.data;
+      var m=(r&&r.error)||'Erreur inconnue.';
+      if(/SESSION/.test(m)){logoutLocal();toast('Session expirée, reconnectez-vous.');throw new Error('SESSION')}
+      throw new Error(m.replace(/^Error:\s*/,''));
+    },function(){busy(-1);throw new Error('Connexion impossible. Vérifiez votre connexion internet et réessayez.')});
+}
+
+/* ---------- connexion ---------- */
+function logoutLocal(){S.token=null;S.me=null;ls('pirc_token',null);renderLogin()}
+
+function renderLogin(){
+  closeModal();
+  $('app').innerHTML='<div class="center"><div class="box"><h1>Planning IRC</h1><p>Connectez-vous avec votre nom et votre code.</p>'+
+    '<form id="lf"><label>Utilisateur</label><select id="lu"><option>Chargement…</option></select>'+
+    '<label>Code</label><input id="lp" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="••••">'+
+    '<button class="btn primary" id="lb" type="submit">Se connecter</button><div class="err" id="le"></div></form></div></div>';
+  api('apiUserNames').then(function(list){
+    var last=ls('pirc_last');
+    $('lu').innerHTML=list.map(function(u){return'<option value="'+esc(u.id)+'"'+(u.id===last?' selected':'')+'>'+esc(u.nom)+'</option>'}).join('');
+  }).catch(function(e){$('le').textContent=e.message});
+  $('lf').onsubmit=function(ev){
+    ev.preventDefault();var uid=$('lu').value,pin=$('lp').value;
+    if(!pin){$('le').textContent='Saisissez votre code.';return}
+    $('lb').disabled=true;$('le').textContent='';
+    api('apiLogin',uid,pin).then(function(r){
+      S.token=r.token;S.me=r.user;ls('pirc_token',r.token);ls('pirc_last',uid);
+      if(r.user.changerPin)renderChangePin(true);else{S.monday=mondayOf(new Date());load()}
+    }).catch(function(e){$('le').textContent=e.message;$('lb').disabled=false});
+  };
+}
+
+function renderChangePin(force){
+  var html='<div class="box"><h1>'+(force?'Choisissez votre code':'Changer mon code')+'</h1>'+
+    '<p>'+(force?'Première connexion : remplacez le code initial par un code personnel (4 à 8 chiffres).':'Votre nouveau code doit contenir 4 à 8 chiffres.')+'</p>'+
+    '<form id="pf"><label>Code actuel</label><input id="p0" type="password" inputmode="numeric" maxlength="8">'+
+    '<label>Nouveau code</label><input id="p1" type="password" inputmode="numeric" maxlength="8">'+
+    '<label>Confirmer le nouveau code</label><input id="p2" type="password" inputmode="numeric" maxlength="8">'+
+    '<button class="btn primary" id="pb" type="submit">Enregistrer</button>'+
+    (force?'':'<button class="btn" type="button" id="pc" style="width:100%;margin-top:8px">Annuler</button>')+
+    '<div class="err" id="pe"></div></form></div>';
+  if(force){$('app').innerHTML='<div class="center">'+html+'</div>'}else{openModal(html);$('pc').onclick=closeModal}
+  $('pf').onsubmit=function(ev){
+    ev.preventDefault();
+    if($('p1').value!==$('p2').value){$('pe').textContent='Les deux nouveaux codes ne correspondent pas.';return}
+    $('pb').disabled=true;
+    api('apiChangePin',S.token,$('p0').value,$('p1').value).then(function(u){
+      S.me=u;toast('Code enregistré.');closeModal();
+      if(force){S.monday=mondayOf(new Date());load()}
+    }).catch(function(e){$('pe').textContent=e.message;$('pb').disabled=false});
+  };
+}
+
+/* ---------- données ---------- */
+function load(silent){
+  var from=iso(S.monday),to=iso(addDays(S.monday,6));
+  return api('apiData',S.token,from,to).then(function(d){
+    S.me=d.me;S.users=d.users;S.dossiers=d.dossiers;S.tasks=d.tasks;
+    if(S.me.changerPin){renderChangePin(true);return}
+    if(!silent||$('modal').classList.contains('hidden'))renderMain();
+  }).catch(function(e){if(e.message!=='SESSION')toast(e.message)});
+}
+
+/* ---------- écran principal ---------- */
+function renderMain(){
+  var mon=S.monday,sat=addDays(mon,5);
+  var h='<div class="wrap"><header class="top"><div class="brand">Planning IRC<small>IRC-SARL · planning de l\'équipe</small></div>'+
+    '<div class="me"><span class="chip" data-a="menu"><span class="dot" style="--c:'+esc(S.me.couleur)+'"></span>'+esc(S.me.nom)+' ▾</span>'+
+    (S.menu?'<div class="menu"><button data-a="pin">Changer mon code</button><button data-a="refresh">Actualiser</button><button data-a="logout">Se déconnecter</button></div>':'')+
+    '</div></header>';
+  h+='<div class="weeknav"><button class="btn small" data-a="prev">◀</button><span class="lbl">Semaine du '+mon.getDate()+' '+MOIS[mon.getMonth()]+' au '+sat.getDate()+' '+MOIS[sat.getMonth()]+' '+sat.getFullYear()+'</span>'+
+    '<button class="btn small" data-a="next">▶</button><button class="btn small" data-a="thisweek">Cette semaine</button></div>';
+  h+='<div class="tabs"><button data-a="tab" data-v="mine" class="'+(S.tab==='mine'?'on':'')+'">Mon planning</button>'+
+    '<button data-a="tab" data-v="team" class="'+(S.tab==='team'?'on':'')+'">Planning de l\'équipe</button>'+
+    (isAdmin()?'<button data-a="tab" data-v="admin" class="'+(S.tab==='admin'?'on':'')+'">Administration</button>':'')+'</div>';
+  if(S.tab==='admin'&&isAdmin())h+=adminHTML();
+  else if(S.tab==='team')h+=teamHTML();
+  else h+=mineHTML();
+  h+='</div>';
+  $('app').innerHTML=h;
+}
+
+function mineHTML(){
+  var mine=S.tasks.filter(function(t){return t.userId===S.me.id});
+  var h='';
+  var ids=[];mine.forEach(function(t){if(ids.indexOf(t.dossierId)<0)ids.push(t.dossierId)});
+  var all=pct(mine);
+  h+='<div class="cards"><div class="scard" style="--c:var(--accent)"><span class="pill'+(mine.length&&all===100?' ok':'')+'">'+all+' %</span><b>Ma semaine</b><div class="meta">'+
+    mine.filter(function(t){return t.statut==='Fait'}).length+' / '+mine.length+' tâches faites</div><div class="bar"><i style="width:'+all+'%"></i></div></div>';
+  ids.forEach(function(id){
+    var d=dossier(id),l=mine.filter(function(t){return t.dossierId===id}),q=pct(l);
+    h+='<div class="scard" style="--c:'+esc(d.couleur)+'"><span class="pill'+(q===100?' ok':'')+'">'+(q===100?'Terminé':q+' %')+'</span><b>'+esc(d.nom)+'</b>'+
+      '<div class="meta">'+(d.echeance?'Échéance : '+fmtShort(d.echeance):'&nbsp;')+'</div><div class="bar"><i style="width:'+q+'%"></i></div></div>';
+  });
+  h+='</div>';
+  h+=daysHTML(mine,false,S.me.id);
+  return h;
+}
+
+function teamHTML(){
+  var act=S.users.filter(function(u){return u.actif});
+  var h='<div class="cards">';
+  h+='<div class="scard click'+(S.team==='all'?' sel':'')+'" data-a="team" data-v="all" style="--c:var(--accent)"><b>Toute l\'équipe</b><div class="meta">'+
+    S.tasks.filter(function(t){return t.statut==='Fait'}).length+' / '+S.tasks.length+' tâches faites</div><div class="bar"><i style="width:'+pct(S.tasks)+'%"></i></div></div>';
+  act.forEach(function(u){
+    var l=S.tasks.filter(function(t){return t.userId===u.id}),q=pct(l);
+    h+='<div class="scard click'+(S.team===u.id?' sel':'')+'" data-a="team" data-v="'+esc(u.id)+'" style="--c:'+esc(u.couleur)+'"><span class="pill'+(l.length&&q===100?' ok':'')+'">'+q+' %</span><b>'+esc(u.nom)+'</b>'+
+      '<div class="meta">'+l.filter(function(t){return t.statut==='Fait'}).length+' / '+l.length+' tâches faites</div><div class="bar"><i style="width:'+q+'%"></i></div></div>';
+  });
+  h+='</div>';
+  var list=S.team==='all'?S.tasks:S.tasks.filter(function(t){return t.userId===S.team});
+  var addFor=S.team==='all'?(isAdmin()?S.me.id:null):((isAdmin()||S.team===S.me.id)?S.team:null);
+  h+=daysHTML(list,S.team==='all',addFor);
+  return h;
+}
+
+function daysHTML(list,showOwner,addFor){
+  var today=iso(new Date()),h='<div class="days">';
+  for(var i=0;i<6;i++){
+    var d=addDays(S.monday,i),di=iso(d);
+    h+='<section class="day'+(di===today?' today':'')+'"><h2>'+fmtDay(d)+(di===today?' <span class="badge">Aujourd\'hui</span>':'')+'</h2>';
+    CRENEAUX.forEach(function(c){
+      var l=list.filter(function(t){return t.date===di&&t.creneau===c});
+      if(showOwner)l.sort(function(a,b){return user(a.userId).nom.localeCompare(user(b.userId).nom)});
+      h+='<div class="slot"><span>'+(c==='Matin'?'Matin':'Après-midi')+'</span>'+(addFor?'<button data-a="add" data-d="'+di+'" data-c="'+c+'" data-u="'+esc(addFor)+'">+ Ajouter</button>':'')+'</div>';
+      h+=l.length?l.map(function(t){return taskHTML(t,showOwner)}).join(''):'<div class="empty">Rien de prévu</div>';
+    });
+    h+='</section>';
+  }
+  var sun=iso(addDays(S.monday,6)),ls7=list.filter(function(t){return t.date===sun});
+  if(ls7.length){h+='<section class="day"><h2>'+fmtDay(addDays(S.monday,6))+'</h2>'+ls7.map(function(t){return taskHTML(t,showOwner)}).join('')+'</section>'}
+  return h+'</div>';
+}
+
+function taskHTML(t,showOwner){
+  var d=dossier(t.dossierId),u=user(t.userId),ed=canEdit(t);
+  return '<div class="task'+(t.statut==='Fait'?' done':'')+'" style="--c:'+esc(d.couleur)+'">'+
+    '<input type="checkbox" data-a="toggle" data-id="'+esc(t.id)+'"'+(t.statut==='Fait'?' checked':'')+(ed?'':' disabled')+' aria-label="Fait">'+
+    '<div class="body" data-a="open" data-id="'+esc(t.id)+'"><div class="tag">'+
+    (showOwner?'<span class="owner"><span class="dot" style="--c:'+esc(u.couleur)+'"></span>'+esc(u.nom)+'</span>':'')+esc(d.nom)+'</div>'+
+    '<div class="t">'+esc(t.titre)+(t.statut==='En cours'?'<span class="st">En cours</span>':'')+'</div>'+
+    (t.detail?'<div class="d">'+esc(t.detail)+'</div>':'')+(t.note?'<div class="n">'+esc(t.note)+'</div>':'')+'</div></div>';
+}
+
+/* ---------- administration ---------- */
+function adminHTML(){
+  var h='<div class="panel"><h3>Utilisateurs <button class="btn small primary" data-a="user-new">+ Ajouter</button></h3><table><tr><th>Nom</th><th>Rôle</th><th>État</th><th></th></tr>';
+  S.users.forEach(function(u){
+    h+='<tr><td><span class="dot" style="--c:'+esc(u.couleur)+'"></span> '+esc(u.nom)+'</td><td>'+(u.role==='admin'?'Administrateur':'Membre')+'</td>'+
+      '<td>'+(u.actif?'Actif':'Désactivé')+(u.changerPin?' · code initial':'')+'</td>'+
+      '<td style="text-align:right"><button class="btn small" data-a="user-edit" data-id="'+esc(u.id)+'">Modifier</button></td></tr>';
+  });
+  h+='</table><p style="font-size:13px;color:var(--muted);margin:10px 0 0">Un nouvel utilisateur se connecte la première fois avec le code <b>0000</b>, puis choisit son propre code.</p></div>';
+  h+='<div class="panel"><h3>Dossiers <button class="btn small primary" data-a="dos-new">+ Ajouter</button></h3><table><tr><th>Dossier</th><th>Échéance</th><th>État</th><th></th></tr>';
+  S.dossiers.forEach(function(d){
+    h+='<tr><td><span class="dot" style="--c:'+esc(d.couleur)+'"></span> '+esc(d.nom)+'</td><td>'+(d.echeance?fmtShort(d.echeance)+' '+d.echeance.slice(0,4):'—')+'</td><td>'+(d.actif?'Actif':'Archivé')+'</td>'+
+      '<td style="text-align:right"><button class="btn small" data-a="dos-edit" data-id="'+esc(d.id)+'">Modifier</button></td></tr>';
+  });
+  return h+'</table></div>';
+}
+
+function userForm(u){
+  var isNew=!u;u=u||{nom:'',role:'membre',actif:true,couleur:'#2b6cb0'};
+  var self=!isNew&&u.id===S.me.id;
+  openModal('<div class="box"><h1>'+(isNew?'Nouvel utilisateur':'Modifier l\'utilisateur')+'</h1><form id="uf">'+
+    '<label>Nom</label><input id="un" value="'+esc(u.nom)+'" required>'+
+    '<div class="row"><div><label>Rôle</label><select id="ur"'+(self?' disabled':'')+'><option value="membre">Membre</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>Administrateur</option></select></div>'+
+    '<div><label>Couleur</label><input id="uc" type="color" value="'+esc(u.couleur||'#2b6cb0')+'" style="height:40px;padding:3px"></div></div>'+
+    (isNew?'':'<label>État</label><select id="ua"'+(self?' disabled':'')+'><option value="1">Actif</option><option value="0"'+(u.actif?'':' selected')+'>Désactivé</option></select>')+
+    '<div class="err" id="ue"></div><div class="acts">'+
+    (isNew?'':'<button class="btn" type="button" id="ureset">Remettre le code à 0000</button>')+
+    '<div class="right"><button class="btn" type="button" id="ux">Annuler</button><button class="btn primary" id="us" type="submit">Enregistrer</button></div></div></form></div>');
+  $('ux').onclick=closeModal;
+  function send(reset){
+    var obj={id:isNew?'':u.id,nom:$('un').value,role:$('ur').value,couleur:$('uc').value,actif:isNew?true:$('ua').value==='1',resetPin:!!reset};
+    $('us').disabled=true;
+    api('apiSaveUser',S.token,obj).then(function(){closeModal();toast(reset?'Code remis à 0000.':'Utilisateur enregistré.');load()})
+      .catch(function(e){$('ue').textContent=e.message;$('us').disabled=false});
+  }
+  $('uf').onsubmit=function(ev){ev.preventDefault();send(false)};
+  if(!isNew){var r=$('ureset');r.onclick=function(){if(r.dataset.ok){send(true)}else{r.dataset.ok=1;r.textContent='Confirmer la remise à 0000';r.classList.add('danger')}}}
+}
+
+function dosForm(d){
+  var isNew=!d;d=d||{nom:'',couleur:'#6b7686',echeance:'',actif:true};
+  openModal('<div class="box"><h1>'+(isNew?'Nouveau dossier':'Modifier le dossier')+'</h1><form id="df">'+
+    '<label>Nom du dossier</label><input id="dn" value="'+esc(d.nom)+'" required>'+
+    '<div class="row"><div><label>Échéance</label><input id="dd" type="date" value="'+esc(d.echeance)+'"></div>'+
+    '<div><label>Couleur</label><input id="dc" type="color" value="'+esc(d.couleur)+'" style="height:40px;padding:3px"></div></div>'+
+    '<label>État</label><select id="da"><option value="1">Actif</option><option value="0"'+(d.actif?'':' selected')+'>Archivé</option></select>'+
+    '<div class="err" id="de"></div><div class="acts"><div class="right"><button class="btn" type="button" id="dx">Annuler</button><button class="btn primary" id="ds" type="submit">Enregistrer</button></div></div></form></div>');
+  $('dx').onclick=closeModal;
+  $('df').onsubmit=function(ev){ev.preventDefault();$('ds').disabled=true;
+    api('apiSaveDossier',S.token,{id:isNew?'':d.id,nom:$('dn').value,couleur:$('dc').value,echeance:$('dd').value,actif:$('da').value==='1'})
+      .then(function(){closeModal();toast('Dossier enregistré.');load()}).catch(function(e){$('de').textContent=e.message;$('ds').disabled=false})};
+}
+
+/* ---------- fiche tâche ---------- */
+function taskForm(t,preset){
+  var isNew=!t;
+  t=t||{id:'',userId:preset.u,date:preset.d,creneau:preset.c,dossierId:'',titre:'',detail:'',statut:'À faire',note:''};
+  var ed=isNew||canEdit(t),u=user(t.userId),d=dossier(t.dossierId);
+  if(!ed){
+    openModal('<div class="box"><h1>'+esc(t.titre)+'</h1><p>'+esc(u.nom)+' · '+fmtDay(parseIso(t.date))+' · '+esc(t.creneau)+'</p>'+
+      '<div class="ro"><b>Dossier :</b> '+esc(d.nom)+'</div><div class="ro"><b>Statut :</b> '+esc(t.statut)+'</div>'+
+      (t.detail?'<div class="ro"><b>Détail :</b> '+esc(t.detail)+'</div>':'')+(t.note?'<div class="ro"><b>Note :</b> '+esc(t.note)+'</div>':'')+
+      '<div class="acts"><div class="right"><button class="btn" id="tx">Fermer</button></div></div></div>');
+    $('tx').onclick=closeModal;return;
+  }
+  var dosOpts='<option value="">Sans dossier</option>'+S.dossiers.filter(function(x){return x.actif||x.id===t.dossierId}).map(function(x){return'<option value="'+esc(x.id)+'"'+(x.id===t.dossierId?' selected':'')+'>'+esc(x.nom)+'</option>'}).join('');
+  var who=isAdmin()?'<label>Assignée à</label><select id="fu">'+S.users.filter(function(x){return x.actif||x.id===t.userId}).map(function(x){return'<option value="'+esc(x.id)+'"'+(x.id===t.userId?' selected':'')+'>'+esc(x.nom)+'</option>'}).join('')+'</select>':'';
+  openModal('<div class="box"><h1>'+(isNew?'Nouvelle tâche':'Modifier la tâche')+'</h1><form id="tf">'+
+    '<label>Intitulé</label><input id="ft" value="'+esc(t.titre)+'" required maxlength="200">'+
+    '<label>Détail</label><input id="fd" value="'+esc(t.detail)+'" maxlength="500">'+
+    '<label>Dossier</label><select id="fdo">'+dosOpts+'</select>'+who+
+    '<div class="row"><div><label>Date</label><input id="fda" type="date" value="'+esc(t.date)+'" required></div>'+
+    '<div><label>Créneau</label><select id="fc">'+CRENEAUX.map(function(c){return'<option'+(c===t.creneau?' selected':'')+'>'+c+'</option>'}).join('')+'</select></div></div>'+
+    '<label>Statut</label><select id="fs">'+STATUTS.map(function(s){return'<option'+(s===t.statut?' selected':'')+'>'+s+'</option>'}).join('')+'</select>'+
+    '<label>Note</label><textarea id="fn" maxlength="1000" placeholder="Ex. : en attente des données de la Mairie">'+esc(t.note)+'</textarea>'+
+    '<div class="err" id="fe"></div><div class="acts">'+(isNew?'':'<button class="btn" type="button" id="fdel">Supprimer</button>')+
+    '<div class="right"><button class="btn" type="button" id="fx">Annuler</button><button class="btn primary" id="fsv" type="submit">Enregistrer</button></div></div></form></div>');
+  $('fx').onclick=closeModal;
+  if(isNew)setTimeout(function(){$('ft').focus()},50);
+  $('tf').onsubmit=function(ev){
+    ev.preventDefault();$('fsv').disabled=true;
+    var obj={id:t.id,userId:isAdmin()?$('fu').value:S.me.id,titre:$('ft').value,detail:$('fd').value,dossierId:$('fdo').value,date:$('fda').value,creneau:$('fc').value,statut:$('fs').value,note:$('fn').value};
+    api('apiSaveTask',S.token,obj).then(function(){closeModal();toast('Tâche enregistrée.');load()})
+      .catch(function(e){$('fe').textContent=e.message;$('fsv').disabled=false});
+  };
+  if(!isNew){var b=$('fdel');b.onclick=function(){
+    if(!b.dataset.ok){b.dataset.ok=1;b.textContent='Confirmer la suppression';b.classList.add('danger');return}
+    b.disabled=true;
+    api('apiDeleteTask',S.token,t.id).then(function(){closeModal();toast('Tâche supprimée.');load()}).catch(function(e){$('fe').textContent=e.message;b.disabled=false});
+  }}
+}
+
+function openModal(html){var m=$('modal');m.innerHTML=html;m.classList.remove('hidden')}
+function closeModal(){var m=$('modal');m.classList.add('hidden');m.innerHTML=''}
+function findTask(id){for(var i=0;i<S.tasks.length;i++)if(S.tasks[i].id===id)return S.tasks[i]}
+
+/* ---------- événements ---------- */
+document.addEventListener('click',function(e){
+  var m=$('modal');
+  if(e.target===m){closeModal();return}
+  var el=e.target.closest('[data-a]');
+  if(S.menu&&(!el||['menu','pin','logout','refresh'].indexOf(el.dataset.a)<0)){S.menu=false;renderMain()}
+  if(!el)return;
+  var a=el.dataset.a,id=el.dataset.id;
+  if(a==='menu'){S.menu=!S.menu;renderMain()}
+  else if(a==='pin'){S.menu=false;renderMain();renderChangePin(false)}
+  else if(a==='refresh'){S.menu=false;load()}
+  else if(a==='logout'){var tk=S.token;S.menu=false;api('apiLogout',tk).catch(function(){});logoutLocal()}
+  else if(a==='prev'){S.monday=addDays(S.monday,-7);load()}
+  else if(a==='next'){S.monday=addDays(S.monday,7);load()}
+  else if(a==='thisweek'){S.monday=mondayOf(new Date());load()}
+  else if(a==='tab'){S.tab=el.dataset.v;ls('pirc_tab',S.tab);renderMain()}
+  else if(a==='team'){S.team=el.dataset.v;renderMain()}
+  else if(a==='open'){var t=findTask(id);if(t)taskForm(t)}
+  else if(a==='add'){taskForm(null,{d:el.dataset.d,c:el.dataset.c,u:el.dataset.u})}
+  else if(a==='user-new')userForm(null);
+  else if(a==='user-edit'){S.users.forEach(function(u){if(u.id===id)userForm(u)})}
+  else if(a==='dos-new')dosForm(null);
+  else if(a==='dos-edit'){S.dossiers.forEach(function(d){if(d.id===id)dosForm(d)})}
+  else if(a==='toggle'){
+    var tk2=findTask(id);if(!tk2)return;
+    var old=tk2.statut;tk2.statut=el.checked?'Fait':(old==='Fait'?'À faire':old);
+    renderMain();
+    api('apiSaveTask',S.token,tk2).catch(function(err){tk2.statut=old;renderMain();toast(err.message)});
+  }
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('modal').classList.contains('hidden'))closeModal()});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.token&&S.me)load(true)});
+setInterval(function(){if(!document.hidden&&S.token&&S.me&&$('modal').classList.contains('hidden'))load(true)},90000);
+
+/* ---------- démarrage ---------- */
+S.tab=ls('pirc_tab')||'mine';
+S.token=ls('pirc_token');
+if(S.token){S.monday=mondayOf(new Date());load()}else renderLogin();
+})();
+</script>
+</body>
+</html>
