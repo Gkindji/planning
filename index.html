@@ -128,7 +128,7 @@ var MOISL=['janvier','février','mars','avril','mai','juin','juillet','août','s
 var STATUTS=['À faire','En cours','Fait'];
 var CRENEAUX=['Matin','Après-midi','Journée'];
 var S={token:null,me:null,users:[],dossiers:[],tasks:[],today:'',monday:null,tab:'mine',team:'all',menu:false,busy:0,
-  acts:null,act:null,actTasks:[],actFilter:'all',pres:null,day:null,month:null,sites:null,heureLimite:'08:30',stream:null};
+  acts:null,act:null,actTasks:[],actFilter:'all',pres:null,day:null,month:null,sites:null,heureLimite:'08:00',stream:null};
 
 /* ---------- utilitaires ---------- */
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
@@ -595,7 +595,7 @@ function dosForm(d){
 }
 
 function siteForm(s){
-  var isNew=!s;s=s||{nom:'',lat:'',lng:'',rayon:150,actif:true};
+  var isNew=!s;s=s||{nom:'',lat:'',lng:'',rayon:50,actif:true};
   openModal('<div class="box"><h1>'+(isNew?'Nouveau lieu de pointage':'Modifier le lieu')+'</h1><form id="sf">'+
     '<label>Nom du lieu</label><input id="sn" value="'+esc(s.nom)+'" required placeholder="Ex. : Bureau IRC Cotonou">'+
     '<button class="btn" type="button" id="spos" style="width:100%;margin-top:12px">📍 Utiliser ma position actuelle</button><div class="sub" id="sposi" style="margin-top:4px"></div>'+
