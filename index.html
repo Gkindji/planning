@@ -128,7 +128,7 @@ var MOISL=['janvier','février','mars','avril','mai','juin','juillet','août','s
 var STATUTS=['À faire','En cours','Fait'];
 var CRENEAUX=['Matin','Après-midi','Journée'];
 var S={token:null,me:null,users:[],dossiers:[],tasks:[],today:'',monday:null,tab:'mine',team:'all',menu:false,busy:0,
-  acts:null,act:null,actTasks:[],actFilter:'all',pres:null,day:null,month:null,sites:null,heureLimite:'08:00',stream:null};
+  acts:null,act:null,actTasks:[],actFilter:'all',pres:null,day:null,month:null,sites:null,heureLimite:'08:00',heuresJour:8,pauseDebut:'12:30',pauseFin:'14:00',stream:null};
 
 /* ---------- utilitaires ---------- */
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
@@ -155,6 +155,45 @@ function canEdit(t){return t.userId===S.me.id||canManage(t.dossierId)}
 function pct(l){if(!l.length)return 0;return Math.round(100*l.filter(function(t){return t.statut==='Fait'}).length/l.length)}
 function isLate(t){return t.statut!=='Fait'&&(t.dateFin||t.date)<S.today}
 function todayIso(){return S.today||iso(new Date())}
+function fmtDur(m){if(m==null||isNaN(m))return'—';m=Math.max(0,Math.round(m));return Math.floor(m/60)+' h '+pad(m%60)}
+function nowMin(){var d=new Date();return d.getHours()*60+d.getMinutes()}
+function hm(h){var x=String(h||'').split(':');return(+x[0])*60+(+x[1])}
+var UA=navigator.userAgent||'';
+var IS_IOS=/iPhone|iPad|iPod/i.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+var IS_ANDROID=/Android/i.test(UA);
+var IN_APP=/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|TikTok|; wv\)/i.test(UA);
+function permState(name){
+  try{if(!navigator.permissions||!navigator.permissions.query)return Promise.resolve('unknown');
+    return navigator.permissions.query({name:name}).then(function(r){return r.state},function(){return'unknown'})}catch(e){return Promise.resolve('unknown')}
+}
+function getIP(){
+  function one(url,txt){
+    var ctl=window.AbortController?new AbortController():null,t=setTimeout(function(){ctl&&ctl.abort()},6000);
+    return fetch(url,{cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(r){return txt?r.text():r.json()}).then(function(j){clearTimeout(t);var ip=String(txt?j:j.ip).trim();if(!/^[0-9a-fA-F:.]{3,45}$/.test(ip))throw 0;return ip});
+  }
+  return one('https://api.ipify.org?format=json').catch(function(){return one('https://ipv4.icanhazip.com',true)});
+}
+function permHelp(kind,retry){
+  var what=kind==='camera'?'la caméra':kind==='geo'?'la localisation':'la caméra et la localisation';
+  var items=kind==='camera'?'« Appareil photo » (ou « Caméra »)':kind==='geo'?'« Position » (ou « Localisation »)':'« Appareil photo » et « Position »';
+  var h='<div class="box"><h1>Autoriser '+what+'</h1>';
+  if(IN_APP){
+    h+='<p>Vous avez ouvert l\'application depuis WhatsApp ou une autre application, qui bloque '+what+'. Ouvrez-la dans '+(IS_IOS?'Safari':'Chrome')+' :</p>'+
+      '<ol class="note" style="padding-left:28px;margin:0"><li>Touchez les <b>⋮</b> ou <b>…</b> en haut à droite.</li><li>Choisissez <b>« Ouvrir dans '+(IS_IOS?'Safari':'Chrome')+' »</b> (ou « Ouvrir dans le navigateur »).</li></ol>'+
+      '<p class="sub" style="margin-top:8px">Ou copiez le lien et collez-le dans '+(IS_IOS?'Safari':'Chrome')+' : <b>gkindji.github.io/planning</b></p>';
+  }else if(IS_IOS){
+    h+='<p>L\'autorisation a été refusée. Le site ne peut pas ouvrir les réglages lui-même ; voici où aller :</p>'+
+      '<ol class="note" style="padding-left:28px;margin:0"><li>Dans Safari, touchez <b>« aA »</b> (ou l\'icône à gauche de l\'adresse).</li><li>Touchez <b>« Réglages du site web »</b>.</li><li>Mettez '+items+' sur <b>« Autoriser »</b>.</li><li>Revenez ici et touchez <b>Réessayer</b>.</li></ol>'+
+      '<p class="sub" style="margin-top:8px">Si rien ne change : <b>Réglages</b> de l\'iPhone → <b>Safari</b> → '+items+' → <b>Autoriser</b>'+(kind!=='camera'?' ; et <b>Réglages</b> → <b>Confidentialité</b> → <b>Service de localisation</b> activé, Safari : « Lorsque l\'app est active ».':'.')+'</p>';
+  }else{
+    h+='<p>L\'autorisation a été refusée. Le site ne peut pas ouvrir les réglages lui-même ; voici où aller :</p>'+
+      '<ol class="note" style="padding-left:28px;margin:0"><li>Touchez l\'icône <b>à gauche de l\'adresse</b> du site, en haut de l\'écran (cadenas ou réglages).</li><li>Touchez <b>« Autorisations »</b> (ou « Paramètres du site »).</li><li>Mettez '+items+' sur <b>« Autoriser »</b>.</li><li>Revenez ici et touchez <b>Réessayer</b>.</li></ol>'+
+      '<p class="sub" style="margin-top:8px">Si '+what+' reste bloquée : <b>Paramètres</b> du téléphone → <b>Applications</b> → <b>Chrome</b> → <b>Autorisations</b> → '+items+' → <b>Autoriser</b>.'+(kind!=='camera'?' Vérifiez aussi que la <b>Localisation</b> du téléphone est activée (volet du haut de l\'écran).':'')+'</p>';
+  }
+  if(kind==='geo')h+='<p class="note" style="margin-top:10px">Astuce : connecté au <b>WiFi du bureau</b>, vous pouvez pointer sans la localisation.</p>';
+  h+='<div class="acts"><div class="right"><button class="btn" id="hx">Fermer</button>'+(retry?'<button class="btn primary" id="hr">Réessayer</button>':'')+'</div></div></div>';
+  openModal(h);$('hx').onclick=closeModal;if(retry)$('hr').onclick=function(){closeModal();retry()};
+}
 
 function api(name){
   var args=[].slice.call(arguments,1);
@@ -246,7 +285,7 @@ function loadPres(){
   }
   return Promise.all(ps);
 }
-function loadAdmin(){return api('apiSites',S.token).then(function(r){S.sites=r.sites;S.heureLimite=r.heureLimite})}
+function loadAdmin(){return api('apiSites',S.token).then(function(r){S.sites=r.sites;S.heureLimite=r.heureLimite;S.heuresJour=r.heuresJour;S.pauseDebut=r.pauseDebut;S.pauseFin=r.pauseFin})}
 
 /* ---------- écran principal ---------- */
 function renderMain(){
@@ -399,13 +438,13 @@ function presHTML(){
   else if(!p.arrivee)h+='<button class="btn big ok" data-a="pointer" data-v="Arrivée">Pointer mon arrivée</button>';
   else if(!p.depart)h+='<button class="btn big primary" data-a="pointer" data-v="Départ">Pointer mon départ</button>';
   else h+='<p class="note">Votre journée est complète. Merci !</p>';
-  h+='<p class="sub" style="margin-top:10px">Le pointage vérifie votre position (vous devez être sur un lieu autorisé) et votre visage. Heure d\'arrivée attendue : '+esc(p.heureLimite)+'.</p></div>';
+  h+='<p class="sub" style="margin-top:10px">Le pointage vérifie votre visage et votre présence sur un lieu autorisé (position GPS ou WiFi du bureau). Arrivée attendue : '+esc(p.heureLimite)+'.</p></div>';
   if(isAdmin()&&S.day){
     var d=S.day;
-    h+='<div class="panel"><h3>Registre du jour <input type="date" id="dayin" value="'+esc(d.date)+'" style="width:auto"></h3><div class="tbl"><table><tr><th>Nom</th><th>Arrivée</th><th>Départ</th><th>Lieu</th><th>Visage</th></tr>';
+    h+='<div class="panel"><h3>Registre du jour <input type="date" id="dayin" value="'+esc(d.date)+'" style="width:auto"></h3><div class="tbl"><table><tr><th>Nom</th><th>Arrivée</th><th>Départ</th><th>Travail (hors pause)</th><th>Lieu</th><th>Visage</th></tr>';
     d.lignes.forEach(function(l){
       h+='<tr><td><span class="dot" style="--c:'+esc(l.couleur)+'"></span> '+esc(l.nom)+'</td><td>'+(l.arrivee?esc(l.arrivee)+(l.retard?' <span class="st late">retard</span>':''):'<span style="color:var(--muted)">absent</span>')+'</td>'+
-        '<td>'+(esc(l.depart)||'—')+'</td><td>'+(esc(l.site)||'—')+'</td><td>'+(l.visage?'enregistré':'<span style="color:var(--muted)">non</span>')+'</td></tr>';
+        '<td>'+(esc(l.depart)||'—')+'</td><td>'+(l.duree!=null?fmtDur(l.duree)+(l.duree<d.heuresJour*60?' <span class="st late">&lt; '+d.heuresJour+' h</span>':''):'—')+'</td><td>'+(esc(l.site)||'—')+(l.mode==='WiFi'?' <span class="st range">WiFi</span>':'')+'</td><td>'+(l.visage?'enregistré':'<span style="color:var(--muted)">non</span>')+'</td></tr>';
     });
     h+='</table></div>';
     if(d.refus.length){
@@ -418,8 +457,8 @@ function presHTML(){
   if(isAdmin()&&S.month){
     var m=S.month,pm=m.mois.split('-');
     h+='<div class="panel"><h3>Bilan du mois · '+MOISL[+pm[1]-1]+' '+pm[0]+'<span><input type="month" id="monthin" value="'+esc(m.mois)+'" style="width:auto"> <button class="btn small" data-a="csv">Exporter (Excel)</button></span></h3>'+
-      '<div class="tbl"><table><tr><th>Nom</th><th>Jours présents</th><th>Retards (après '+esc(m.heureLimite)+')</th><th>Sans départ</th><th>Refus</th></tr>';
-    m.lignes.forEach(function(l){h+='<tr><td><span class="dot" style="--c:'+esc(l.couleur)+'"></span> '+esc(l.nom)+'</td><td>'+l.jours+'</td><td>'+l.retards+'</td><td>'+l.sansDepart+'</td><td>'+l.refus+'</td></tr>'});
+      '<div class="tbl"><table><tr><th>Nom</th><th>Jours présents</th><th>Heures travaillées</th><th>Jours &lt; '+m.heuresJour+' h</th><th>Retards (après '+esc(m.heureLimite)+')</th><th>Sans départ</th><th>Refus</th></tr>';
+    m.lignes.forEach(function(l){h+='<tr><td><span class="dot" style="--c:'+esc(l.couleur)+'"></span> '+esc(l.nom)+'</td><td>'+l.jours+'</td><td>'+fmtDur(l.totalMin)+'</td><td>'+l.incomplets+'</td><td>'+l.retards+'</td><td>'+l.sansDepart+'</td><td>'+l.refus+'</td></tr>'});
     h+='</table></div></div>';
   }
   return h;
@@ -427,20 +466,20 @@ function presHTML(){
 
 function exportCsv(){
   var m=S.month;if(!m)return;
-  var rows=[['Nom','Jours présents','Retards','Sans départ','Tentatives refusées','Arrivées (date heure)']];
-  m.lignes.forEach(function(l){rows.push([l.nom,l.jours,l.retards,l.sansDepart,l.refus,l.detail.join(' | ')])});
+  var rows=[['Nom','Jours présents','Heures travaillées','Jours < '+m.heuresJour+' h','Retards','Sans départ','Tentatives refusées','Détail (date arrivée-départ)']];
+  m.lignes.forEach(function(l){rows.push([l.nom,l.jours,fmtDur(l.totalMin),l.incomplets,l.retards,l.sansDepart,l.refus,l.detail.join(' | ')])});
   var csv='﻿'+rows.map(function(r){return r.map(function(c){c=String(c);return/[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(';')}).join('\r\n');
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   a.download='bilan-presence-'+m.mois+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
 }
 
 /* ---------- géolocalisation et reconnaissance faciale ---------- */
-function getPos(){
+function getPos(tmo){
   return new Promise(function(res,rej){
     if(!navigator.geolocation){rej(new Error('Ce navigateur ne permet pas la localisation.'));return}
     navigator.geolocation.getCurrentPosition(function(p){res({lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy})},
-      function(e){rej(new Error(e.code===1?'Localisation refusée. Autorisez la localisation pour ce site dans les réglages du navigateur, puis réessayez.':'Position introuvable. Activez le GPS (localisation) du téléphone et réessayez.'))},
-      {enableHighAccuracy:true,timeout:25000,maximumAge:0});
+      function(e){var er=new Error(e.code===1?'Localisation refusée.':'Position introuvable. Activez la localisation (GPS) du téléphone et réessayez.');er.perm=e.code===1;rej(er)},
+      {enableHighAccuracy:true,timeout:tmo||25000,maximumAge:0});
   });
 }
 var FACE={loading:null};
@@ -469,7 +508,7 @@ function captureFace(title,n,hint){
   function chk(){if(cancelled)throw new Error('CANCEL')}
   var cam=navigator.mediaDevices&&navigator.mediaDevices.getUserMedia?navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false})
     :Promise.reject(new Error('Ce navigateur ne permet pas d\'utiliser la caméra.'));
-  return Promise.all([loadFace(),cam.catch(function(e){throw new Error(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé. Autorisez la caméra pour ce site, puis réessayez.':(e.message||'Caméra indisponible.'))})])
+  return Promise.all([loadFace(),cam.catch(function(e){var er=new Error(e&&(e.name==='NotAllowedError'||e.name==='SecurityError')?'PERM_CAMERA':(e&&e.message||'Caméra indisponible.'));throw er})])
   .then(function(r){
     if(cancelled){r[1].getTracks().forEach(function(t){t.stop()});throw new Error('CANCEL')}
     S.stream=r[1];var v=$('fvid');v.srcObject=r[1];
@@ -503,26 +542,60 @@ function showResult(ok,title,msg){
   $('rok').onclick=closeModal;
 }
 
+function preflight(needGeo){
+  if(IN_APP){permHelp(needGeo?'both':'camera',null);return Promise.reject(new Error('CANCEL'))}
+  return permState('camera').then(function(c){
+    if(c==='denied'){permHelp('camera',null);throw new Error('CANCEL')}
+    if(c==='granted')return;
+    return new Promise(function(res,rej){
+      openModal('<div class="box"><h1>Autorisation nécessaire</h1><p>Le téléphone va vous demander l\'accès à la <b>caméra</b>'+(needGeo?' et à votre <b>position</b>':'')+'. Touchez <b>« Autoriser »</b> à chaque fois.</p>'+
+        '<div class="acts"><div class="right"><button class="btn" id="px">Annuler</button><button class="btn primary" id="pok">Continuer</button></div></div></div>');
+      $('px').onclick=function(){closeModal();rej(new Error('CANCEL'))};$('pok').onclick=function(){res()};
+    });
+  });
+}
+function failFace(e,retry){
+  if(e.message==='CANCEL'||e.message==='SESSION')return true;
+  if(e.message==='PERM_CAMERA'){permHelp('camera',retry);return true}
+  return false;
+}
+
 function doEnroll(){
-  captureFace('Enregistrer mon visage',5,'Regardez la caméra et bougez très légèrement la tête…').then(function(descs){
+  preflight(false).then(function(){
+    return captureFace('Enregistrer mon visage',5,'Regardez la caméra et bougez très légèrement la tête…');
+  }).then(function(descs){
     openModal('<div class="box"><p>Enregistrement…</p></div>');
     return api('apiEnrollFace',S.token,descs);
   }).then(function(){showResult(true,'Visage enregistré','Vous pouvez maintenant pointer votre arrivée et votre départ.');loadTab()})
-  .catch(function(e){if(e.message==='CANCEL'||e.message==='SESSION')return;showResult(false,'Enregistrement impossible',e.message)});
+  .catch(function(e){if(failFace(e,doEnroll))return;showResult(false,'Enregistrement impossible',e.message)});
 }
 
 function doPointage(type){
-  var pos;
-  openModal('<div class="box"><h1>Pointer mon '+(type==='Arrivée'?'arrivée':'départ')+'</h1><p>Localisation en cours… Restez à l\'extérieur des pièces fermées si la position tarde.</p></div>');
-  loadFace().catch(function(){});
-  getPos().then(function(p){
-    pos=p;
-    return captureFace('Pointer mon '+(type==='Arrivée'?'arrivée':'départ'),3,'Regardez la caméra…');
+  var lbl='Pointer mon '+(type==='Arrivée'?'arrivée':'départ'),pos=null,ip='',geoErr=null;
+  preflight(true).then(function(){
+    openModal('<div class="box"><h1>'+lbl+'</h1><p>Vérification de votre position et du réseau…</p></div>');
+    loadFace().catch(function(){});
+    return Promise.all([
+      getIP().then(function(x){ip=x},function(){}),
+      getPos(20000).then(function(x){pos=x},function(e){geoErr=e})
+    ]);
+  }).then(function(){
+    if(!pos&&!ip){
+      if(geoErr&&geoErr.perm){permHelp('geo',function(){doPointage(type)});throw new Error('CANCEL')}
+      throw new Error((geoErr?geoErr.message:'Position introuvable.')+' Ou connectez-vous au WiFi du bureau.');
+    }
+    return captureFace(lbl,3,'Regardez la caméra…');
   }).then(function(descs){
     openModal('<div class="box"><p>Vérification…</p></div>');
-    return api('apiPointer',S.token,type,{lat:pos.lat,lng:pos.lng,acc:pos.acc},mean(descs));
-  }).then(function(r){showResult(true,(type==='Arrivée'?'Arrivée enregistrée':'Départ enregistré')+' à '+r.heure,'Lieu : '+r.site+'.');loadTab()})
-  .catch(function(e){if(e.message==='CANCEL'||e.message==='SESSION')return;showResult(false,'Pointage refusé',e.message);loadTab()});
+    return api('apiPointer',S.token,type,pos?{lat:pos.lat,lng:pos.lng,acc:pos.acc}:null,mean(descs),ip);
+  }).then(function(r){
+    var msg='Lieu : '+r.site+(r.mode==='WiFi'?' (WiFi du bureau)':'')+'.';
+    showResult(true,(type==='Arrivée'?'Arrivée enregistrée':'Départ enregistré')+' à '+r.heure,msg);loadTab();
+  }).catch(function(e){
+    if(failFace(e,function(){doPointage(type)}))return;
+    if(geoErr&&geoErr.perm&&/hors zone|non vérifiée/i.test(e.message)){permHelp('geo',function(){doPointage(type)});return}
+    showResult(false,'Pointage refusé',e.message);loadTab();
+  });
 }
 
 /* ---------- administration ---------- */
@@ -541,15 +614,16 @@ function adminHTML(){
   });
   h+='</table></div></div>';
   h+='<div class="panel"><h3>Lieux de pointage <button class="btn small primary" data-a="site-new">+ Ajouter</button></h3>'+
-    '<p class="sub">Le pointage n\'est accepté que dans le rayon d\'un lieu actif. Pour ajouter le bureau, faites-le en étant sur place : le bouton « Utiliser ma position » remplit les coordonnées.</p>';
+    '<p class="sub">Le pointage est accepté dans le rayon d\'un lieu actif, ou depuis le WiFi enregistré pour ce lieu. Faites-le en étant sur place, connecté au WiFi du bureau : les boutons remplissent la position et l\'adresse du réseau.</p>';
   if(!S.sites)h+='<div class="empty">Chargement…</div>';
   else if(!S.sites.length)h+='<div class="empty">Aucun lieu configuré.</div>';
   else{h+='<div class="tbl"><table><tr><th>Lieu</th><th>Rayon</th><th>État</th><th></th></tr>';
-    S.sites.forEach(function(s){h+='<tr><td>'+esc(s.nom)+'<br><span style="font-size:12px;color:var(--muted)">'+s.lat.toFixed(5)+', '+s.lng.toFixed(5)+'</span></td><td>'+s.rayon+' m</td><td>'+(s.actif?'Actif':'Désactivé')+'</td>'+
+    S.sites.forEach(function(s){h+='<tr><td>'+esc(s.nom)+'<br><span style="font-size:12px;color:var(--muted)">'+(s.lat!=null?s.lat.toFixed(5)+', '+s.lng.toFixed(5):'sans position GPS')+(s.ips?' · WiFi : '+esc(s.ips):'')+'</span></td><td>'+(s.lat!=null?s.rayon+' m':'—')+'</td><td>'+(s.actif?'Actif':'Désactivé')+'</td>'+
       '<td style="text-align:right"><button class="btn small" data-a="site-edit" data-id="'+esc(s.id)+'">Modifier</button></td></tr>'});
     h+='</table></div>';}
-  h+='</div><div class="panel"><h3>Paramètres de présence</h3><form id="setf" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><div><label>Heure d\'arrivée attendue (au-delà : retard)</label>'+
-    '<input type="time" id="hlim" value="'+esc(S.heureLimite)+'" style="width:auto"></div><button class="btn primary" type="submit">Enregistrer</button></form></div>';
+  h+='</div><div class="panel"><h3>Paramètres de présence</h3><p class="sub">Visible uniquement par l\'administrateur : le temps de travail est calculé entre l\'arrivée et le départ, sans la pause.</p><form id="setf" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><div><label>Heure d\'arrivée attendue (au-delà : retard)</label>'+
+    '<input type="time" id="hlim" value="'+esc(S.heureLimite)+'" style="width:auto"></div><div><label>Heures de travail par jour</label><input type="number" id="hjour" min="1" max="16" step="0.5" value="'+esc(S.heuresJour)+'" style="width:90px"></div>'+
+    '<div><label>Pause (non comptée)</label><input type="time" id="pdeb" value="'+esc(S.pauseDebut)+'" style="width:auto"> à <input type="time" id="pfin" value="'+esc(S.pauseFin)+'" style="width:auto"></div><button class="btn primary" type="submit">Enregistrer</button></form></div>';
   return h;
 }
 
@@ -595,11 +669,13 @@ function dosForm(d){
 }
 
 function siteForm(s){
-  var isNew=!s;s=s||{nom:'',lat:'',lng:'',rayon:50,actif:true};
+  var isNew=!s;s=s||{nom:'',lat:'',lng:'',rayon:50,actif:true,ips:''};
   openModal('<div class="box"><h1>'+(isNew?'Nouveau lieu de pointage':'Modifier le lieu')+'</h1><form id="sf">'+
     '<label>Nom du lieu</label><input id="sn" value="'+esc(s.nom)+'" required placeholder="Ex. : Bureau IRC Cotonou">'+
     '<button class="btn" type="button" id="spos" style="width:100%;margin-top:12px">📍 Utiliser ma position actuelle</button><div class="sub" id="sposi" style="margin-top:4px"></div>'+
-    '<div class="row"><div><label>Latitude</label><input id="sla" value="'+esc(s.lat)+'" inputmode="decimal"></div><div><label>Longitude</label><input id="slo" value="'+esc(s.lng)+'" inputmode="decimal"></div></div>'+
+    '<div class="row"><div><label>Latitude</label><input id="sla" value="'+esc(s.lat==null?'':s.lat)+'" inputmode="decimal"></div><div><label>Longitude</label><input id="slo" value="'+esc(s.lng==null?'':s.lng)+'" inputmode="decimal"></div></div>'+
+    '<label>Adresse(s) du WiFi du lieu (adresse IP publique)</label><input id="sip" value="'+esc(s.ips||'')+'" placeholder="Ex. : 41.79.218.12">'+
+    '<button class="btn" type="button" id="snet" style="width:100%;margin-top:8px">📶 Utiliser le réseau auquel je suis connecté</button><div class="sub" id="sneti" style="margin-top:4px">Connectez-vous d\'abord au WiFi du bureau.</div>'+
     '<div class="row"><div><label>Rayon autorisé (m)</label><input id="sr" type="number" min="20" max="5000" value="'+esc(s.rayon)+'"></div>'+
     '<div><label>État</label><select id="sa"><option value="1">Actif</option><option value="0"'+(s.actif?'':' selected')+'>Désactivé</option></select></div></div>'+
     '<div class="err" id="se"></div><div class="acts"><div class="right"><button class="btn" type="button" id="sx">Annuler</button><button class="btn primary" id="ss" type="submit">Enregistrer</button></div></div></form></div>');
@@ -609,8 +685,13 @@ function siteForm(s){
     getPos().then(function(p){$('sla').value=p.lat.toFixed(6);$('slo').value=p.lng.toFixed(6);$('sposi').textContent='Position relevée (précision ± '+Math.round(p.acc)+' m).'+(p.acc>50?' Précision faible : approchez-vous d\'une fenêtre et réessayez.':'')})
       .catch(function(e){$('sposi').textContent=e.message});
   };
+  $('snet').onclick=function(){
+    $('sneti').textContent='Recherche de l\'adresse du réseau…';
+    getIP().then(function(ip){var cur=$('sip').value.split(/[\s,;]+/).filter(String);if(cur.indexOf(ip)<0)cur.push(ip);$('sip').value=cur.join(', ');$('sneti').textContent='Adresse du réseau actuel : '+ip+'. Vérifiez que ce téléphone est bien sur le WiFi du bureau (et non sur les données mobiles).'})
+      .catch(function(){$('sneti').textContent='Impossible de lire l\'adresse du réseau. Vérifiez la connexion.'});
+  };
   $('sf').onsubmit=function(ev){ev.preventDefault();$('ss').disabled=true;
-    api('apiSaveSite',S.token,{id:isNew?'':s.id,nom:$('sn').value,lat:$('sla').value.replace(',','.'),lng:$('slo').value.replace(',','.'),rayon:$('sr').value,actif:$('sa').value==='1'})
+    api('apiSaveSite',S.token,{id:isNew?'':s.id,nom:$('sn').value,lat:$('sla').value.replace(',','.'),lng:$('slo').value.replace(',','.'),rayon:$('sr').value,actif:$('sa').value==='1',ips:$('sip').value})
       .then(function(){closeModal();toast('Lieu enregistré.');loadTab()}).catch(function(e){$('se').textContent=e.message;$('ss').disabled=false})};
 }
 
@@ -715,7 +796,7 @@ document.addEventListener('change',function(e){
 });
 document.addEventListener('submit',function(e){
   if(e.target.id!=='setf')return;e.preventDefault();
-  api('apiSaveSettings',S.token,{heureLimite:$('hlim').value}).then(function(){S.heureLimite=$('hlim').value;toast('Paramètre enregistré.')}).catch(function(err){toast(err.message)});
+  api('apiSaveSettings',S.token,{heureLimite:$('hlim').value,heuresJour:$('hjour').value,pauseDebut:$('pdeb').value,pauseFin:$('pfin').value}).then(function(){S.heureLimite=$('hlim').value;S.heuresJour=+$('hjour').value;toast('Paramètres enregistrés.')}).catch(function(err){toast(err.message)});
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('modal').classList.contains('hidden'))closeModal()});
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.token&&S.me&&$('modal').classList.contains('hidden'))load(true)});
